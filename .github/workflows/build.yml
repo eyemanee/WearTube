@@ -23,13 +23,21 @@ jobs:
           distribution: temurin
           java-version: '21'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android platform
+      # Le SDK Android est déjà préinstallé sur ubuntu-latest.
+      # android-actions/setup-android@v3 essayait d'installer le paquet obsolète
+      # "tools", qui n'existe plus avec cmdline-tools 16 -> on l'évite.
+      - name: Install Android SDK packages
         run: |
-          yes | sdkmanager "platforms;android-37.1" || true
-          yes | sdkmanager "platforms;android-37" || true
+          SDKMANAGER="$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager"
+          if [ ! -x "$SDKMANAGER" ]; then
+            SDKMANAGER=$(ls -d "$ANDROID_HOME"/cmdline-tools/*/bin/sdkmanager | sort -V | tail -n1)
+          fi
+          echo "Using $SDKMANAGER"
+          yes | "$SDKMANAGER" --licenses > /dev/null || true
+          "$SDKMANAGER" --install "platform-tools" || true
+          "$SDKMANAGER" --install "platforms;android-37.1" || true
+          "$SDKMANAGER" --install "platforms;android-37" || true
+          ls "$ANDROID_HOME/platforms" || true
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
